@@ -12,7 +12,6 @@ import { Settings, LogOut, Users, Upload, FileText } from "lucide-react";
 import { clsx } from "clsx";
 import { auth, checkIsAllowed, logOut } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import bookUrl from "./book.txt?url";
 import * as pdfjsLib from "pdfjs-dist";
 
 // Set PDF.js worker
@@ -48,20 +47,6 @@ export default function App() {
       setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Try to load default book.txt
-    fetch(bookUrl)
-      .then(async (res) => {
-        if (res.ok) {
-          const text = await res.text();
-          if (!text.trim().startsWith("<!DOCTYPE html>")) {
-            setBookText(text);
-          }
-        }
-      })
-      .catch(() => console.log("No default book.txt found"));
   }, []);
 
   useEffect(() => {
