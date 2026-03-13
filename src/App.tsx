@@ -13,9 +13,10 @@ import { clsx } from "clsx";
 import { auth, checkIsAllowed, logOut } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 // Set PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export type Language = "English" | "Punjabi" | "Hindi";
 export type TextSize = "sm" | "base" | "lg";
