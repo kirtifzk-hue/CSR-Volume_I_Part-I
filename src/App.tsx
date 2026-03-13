@@ -12,6 +12,7 @@ import { Settings, LogOut, Users } from "lucide-react";
 import { clsx } from "clsx";
 import { auth, checkIsAllowed, logOut } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
+import bookUrl from "./book.txt?url";
 
 export type Language = "English" | "Punjabi" | "Hindi";
 export type TextSize = "sm" | "base" | "lg";
@@ -45,11 +46,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Check if book.txt exists in public folder
-    fetch("/book.txt")
-      .then((res) => {
+    // Check if book.txt exists
+    fetch(bookUrl)
+      .then(async (res) => {
         if (res.ok) {
-          setHasBook(true);
+          const text = await res.text();
+          if (text.trim().startsWith("<!DOCTYPE html>")) {
+            setHasBook(false);
+          } else {
+            setHasBook(true);
+          }
         } else {
           setHasBook(false);
         }
@@ -147,7 +153,7 @@ export default function App() {
                 Book Not Found
               </h2>
               <p className="text-gray-600 dark:text-gray-300">
-                The book file could not be loaded. Please ensure book.txt exists in the public directory.
+                The book file could not be loaded. Please ensure the book text was processed correctly.
               </p>
             </div>
           </div>

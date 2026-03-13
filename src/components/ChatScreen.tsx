@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { clsx } from "clsx";
 import { Language } from "../App";
 import { GoogleGenAI } from "@google/genai";
+import bookUrl from "../book.txt?url";
 
 interface Message {
   id: string;
@@ -32,10 +33,12 @@ export function ChatScreen({ language }: ChatScreenProps) {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const res = await fetch("/book.txt");
+        const res = await fetch(bookUrl);
         if (res.ok) {
           const text = await res.text();
-          setBookText(text);
+          if (!text.trim().startsWith("<!DOCTYPE html>")) {
+            setBookText(text);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch book text:", err);
