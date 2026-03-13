@@ -8,18 +8,23 @@ import { ChatScreen } from "./components/ChatScreen";
 import { SettingsModal } from "./components/SettingsModal";
 import { LoginScreen } from "./components/LoginScreen";
 import { AdminPanel } from "./components/AdminPanel";
-import { Settings, LogOut, Users } from "lucide-react";
+import { Settings, LogOut, Users, Upload, FileText } from "lucide-react";
 import { clsx } from "clsx";
 import { auth, checkIsAllowed, logOut } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import bookUrl from "./book.txt?url";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Set PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export type Language = "English" | "Punjabi" | "Hindi";
 export type TextSize = "sm" | "base" | "lg";
 export type Theme = "light" | "dark";
 
 export default function App() {
-  const [hasBook, setHasBook] = useState<boolean | null>(null);
+  const [bookText, setBookText] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [language, setLanguage] = useState<Language>("English");
   const [textSize, setTextSize] = useState<TextSize>("base");
   const [theme, setTheme] = useState<Theme>("light");
@@ -46,21 +51,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Check if book.txt exists
+    // Try to load default book.txt
     fetch(bookUrl)
       .then(async (res) => {
         if (res.ok) {
           const text = await res.text();
-          if (text.trim().startsWith("<!DOCTYPE html>")) {
-            setHasBook(false);
-          } else {
-            setHasBook(true);
+          if (!text.trim().startsWith("<!DOCTYPE html>")) {
+            setBookText(text);
           }
-        } else {
-          setHasBook(false);
         }
       })
-      .catch(() => setHasBook(false));
+      .catch(() => console.log("No default book.txt found"));
   }, []);
 
   useEffect(() => {
@@ -71,7 +72,37 @@ export default function App() {
     }
   }, [theme]);
 
-  if (authLoading || hasBook === null) {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      if (file.type === "application/pdf") {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((item: any) => item.str).join(" ") + "\n";
+        }
+        setBookText(text);
+      } else if (file.type === "text/plain") {
+        const text = await file.text();
+        setBookText(text);
+      } else {
+        alert("Please upload a PDF or Text file.");
+      }
+    } catch (error) {
+      console.error("Error reading file:", error);
+      alert("Failed to read the file. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center dark:bg-gray-900 dark:text-white">
         Loading...
@@ -146,19 +177,43 @@ export default function App() {
               </button>
             </div>
           </div>
-        ) : !hasBook ? (
+        ) : !bookText ? (
           <div className="flex-1 flex items-center justify-center p-6 text-center">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full">
-              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
-                Book Not Found
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full flex flex-col items-center">
+              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                Upload a Book
               </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                The book file could not be loaded. Please ensure the book text was processed correctly.
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Please upload a PDF or Text file to start chatting with it.
               </p>
+              
+              <label className="w-full cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                {isUploading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Select PDF or TXT File
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+              </label>
             </div>
           </div>
         ) : (
-          <ChatScreen language={language} />
+          <ChatScreen language={language} bookText={bookText} />
         )}
       </main>
 

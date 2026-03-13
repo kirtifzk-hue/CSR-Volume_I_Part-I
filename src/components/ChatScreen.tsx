@@ -4,7 +4,6 @@ import ReactMarkdown from "react-markdown";
 import { clsx } from "clsx";
 import { Language } from "../App";
 import { GoogleGenAI } from "@google/genai";
-import bookUrl from "../book.txt?url";
 
 interface Message {
   id: string;
@@ -14,14 +13,14 @@ interface Message {
 
 interface ChatScreenProps {
   language: Language;
+  bookText: string;
 }
 
-export function ChatScreen({ language }: ChatScreenProps) {
+export function ChatScreen({ language, bookText }: ChatScreenProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [bookText, setBookText] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -29,23 +28,6 @@ export function ChatScreen({ language }: ChatScreenProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    const fetchBook = async () => {
-      try {
-        const res = await fetch(bookUrl);
-        if (res.ok) {
-          const text = await res.text();
-          if (!text.trim().startsWith("<!DOCTYPE html>")) {
-            setBookText(text);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch book text:", err);
-      }
-    };
-    fetchBook();
-  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !bookText) return;
