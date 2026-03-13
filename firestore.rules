@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: allowedUsers
+    // Document ID: [email_address]
+    // Fields:
+    //   - email: string (required) - The email address of the allowed user
+    //   - addedAt: timestamp (optional) - When the user was added
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "kirtifzk@gmail.com" && request.auth.token.email_verified == true;
+    }
+
+    function isAllowedUser() {
+      return isAuthenticated() && (
+        isAdmin() || 
+        exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
+      );
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidAllowedUser() {
+      return hasOnlyAllowedFields(['email', 'addedAt']) &&
+             request.resource.data.email is string &&
+             isValidEmail(request.resource.data.email) &&
+             (!('addedAt' in request.resource.data) || request.resource.data.addedAt is timestamp);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /allowedUsers/{email} {
+      // Only admins can read the full list of allowed users
+      // Users can read their own allowlist entry
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.token.email == email);
+      
+      // Only admins can add or remove users
+      allow create: if isAdmin() && isValidAllowedUser() && request.resource.data.email == email;
+      allow update: if isAdmin() && isValidAllowedUser() && request.resource.data.email == email;
+      allow delete: if isAdmin();
+    }
+  }
+}

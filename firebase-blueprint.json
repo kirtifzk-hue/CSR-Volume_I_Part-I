@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "AllowedUser": {
+      "title": "Allowed User",
+      "description": "A user who is allowed to access the app.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the allowed user."
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was added to the allowlist."
+        }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/allowedUsers/{userId}": {
+      "schema": {
+        "$ref": "#/entities/AllowedUser"
+      },
+      "description": "Collection of allowed users. The document ID should be the user's email address (or UID)."
+    }
+  }
+}
