@@ -64,7 +64,7 @@ ${bookText.substring(0, 1000000)} // Limit to 1M chars to be safe
       });
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: contents,
         config: {
           systemInstruction: systemInstruction,
@@ -82,8 +82,20 @@ ${bookText.substring(0, 1000000)} // Limit to 1M chars to be safe
       } else {
         console.error("Chat error: No text returned");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send message:", error);
+      
+      let errorMessage = "Sorry, I encountered an error while processing your request.";
+      if (error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED") || error?.status === 429) {
+        errorMessage = "⚠️ **Quota Exceeded**: You have reached the free tier limit for the Gemini API. Please wait a minute for the limit to reset, or check your billing details at Google AI Studio.";
+      }
+      
+      const errorModelMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "model",
+        text: errorMessage,
+      };
+      setMessages((prev) => [...prev, errorModelMessage]);
     } finally {
       setIsLoading(false);
     }
